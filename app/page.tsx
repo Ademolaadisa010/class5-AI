@@ -152,7 +152,7 @@ function Navbar() {
             </a>
           ))}
           <a
-            href="#signup"
+            href="/try-app"
             className="px-5 py-3 rounded-xl text-sm font-semibold text-white text-center mt-1"
             style={{
               background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)",
@@ -291,7 +291,7 @@ function Hero() {
               Start Learning Free <Icon d={ic.arrow} size={18} />
             </a>
             <a
-              href="#features"
+              href="/try-app"
               className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl font-semibold text-white text-base transition-all duration-300"
               style={{
                 border: "1.5px solid rgba(37,99,235,0.45)",
@@ -922,7 +922,7 @@ function Pricing() {
               </ul>
 
               <a
-                href="#signup"
+                href="/login"
                 className="block text-center py-3.5 rounded-2xl font-semibold text-sm transition-all duration-300"
                 style={
                   p.highlight
@@ -1083,7 +1083,7 @@ function CTABanner() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a
-                href="#signup"
+                href="/signup"
                 className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl font-bold text-base transition-all duration-300"
                 style={{
                   background: "#ffffff",
