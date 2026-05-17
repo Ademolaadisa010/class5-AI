@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 
 /* ─── Tiny SVG icon helper ─────────────────────────────────── */
@@ -63,32 +64,7 @@ function Navbar() {
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5 group">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-lg text-white"
-            style={{
-              background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)",
-              fontFamily: "var(--font-sora)",
-              boxShadow: "0 4px 20px rgba(37,99,235,0.4)",
-            }}
-          >
-            C5
-          </div>
-          <span
-            className="text-xl font-bold text-white tracking-tight"
-            style={{ fontFamily: "var(--font-sora)" }}
-          >
-            Class
-            <span
-              style={{
-                background: "linear-gradient(135deg, #2563EB, #7C3AED)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              5
-            </span>{" "}
-            AI
-          </span>
+         <Image src="/logo.png" alt="logo" width={60} height={50} />
         </a>
 
         {/* Desktop links */}
@@ -1167,31 +1143,8 @@ function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-                style={{
-                  background: "linear-gradient(135deg,#2563EB,#7C3AED)",
-                  fontFamily: "var(--font-sora)",
-                }}
-              >
-                C5
-              </div>
-              <span
-                className="text-xl font-bold text-white"
-                style={{ fontFamily: "var(--font-sora)" }}
-              >
-                Class
-                <span
-                  style={{
-                    background: "linear-gradient(135deg,#2563EB,#7C3AED)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  5
-                </span>{" "}
-                AI
-              </span>
+              <Image src="/logo.png" alt="logo" width={60} height={50} />
+              
             </div>
             <p className="text-sm leading-relaxed" style={{ color: "#475569", fontFamily: "var(--font-dm)" }}>
               The AI-powered academic ecosystem helping students of all levels
@@ -1232,7 +1185,7 @@ function Footer() {
           style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
         >
           <p className="text-sm" style={{ color: "#334155", fontFamily: "var(--font-dm)" }}>
-            © 2025 Class5 AI. All rights reserved. Made with ❤️ for students.
+            &copy; 2026 Class5 AI. All rights reserved. Made by Abdulmalik with ❤️ for students.
           </p>
           <div className="flex items-center gap-2">
             <div
