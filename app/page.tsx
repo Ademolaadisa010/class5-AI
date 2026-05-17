@@ -86,7 +86,7 @@ function Navbar() {
         {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
           <a
-            href="#login"
+            href="/login"
             className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-200"
             style={{
               border: "1.5px solid rgba(37,99,235,0.4)",
@@ -104,7 +104,7 @@ function Navbar() {
             Log In
           </a>
           <a
-            href="#signup"
+            href="/try-app"
             className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-300"
             style={{
               background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)",
