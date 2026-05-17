@@ -53,7 +53,7 @@ function Navbar() {
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
+      className="fixed top-0 left-0 z-999 right-0 z-50 transition-all duration-500"
       style={{
         background: scrolled ? "rgba(15,23,42,0.85)" : "transparent",
         backdropFilter: scrolled ? "blur(16px)" : "none",
@@ -159,7 +159,7 @@ function Navbar() {
               fontFamily: "var(--font-sora)",
             }}
           >
-            Get Started Free
+           Try App
           </a>
         </div>
       )}
