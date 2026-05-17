@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 /* ── icons ─────────────────────────────────────────────────── */
@@ -485,15 +486,7 @@ export default function TryPage() {
         }}
       >
         <a href="/" className="flex items-center gap-2 group">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm text-white"
-            style={{ background: "linear-gradient(135deg,#2563EB,#7C3AED)", fontFamily: "var(--font-sora)" }}
-          >
-            C5
-          </div>
-          <span className="text-white font-bold text-lg" style={{ fontFamily: "var(--font-sora)" }}>
-            Class5 AI
-          </span>
+          <Image src="/logo.png" alt="logo" width={60} height={50} />
         </a>
 
         <div className="flex items-center gap-3">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 /* ── icon helper ─────────────────────────────────────── */
 function Icon({ d, size = 18 }: { d: string; size?: number }) {
@@ -589,16 +590,12 @@ export default function SignupPage() {
 
         {/* logo */}
         <div className="relative flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-            style={{ background: cfg.grad, boxShadow: `0 4px 20px ${cfg.glow}`, fontFamily: "var(--font-sora)" }}>
-            C5
-          </div>
-          <span className="text-white text-xl font-bold" style={{ fontFamily: "var(--font-sora)" }}>Class5 AI</span>
+          <Image src="/logo.png" alt="logo" width={60} height={50} />
         </div>
 
         {/* centre */}
         <div className="relative space-y-6">
-          <div className="text-7xl">{cfg.emoji}</div>
+          {/* <div className="text-7xl">{cfg.emoji}</div> */}
           <div>
             <h2 className="text-white font-extrabold leading-tight mb-3"
               style={{ fontFamily: "var(--font-sora)", fontSize: "2.4rem" }}>
