@@ -49,11 +49,11 @@ function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  const links = ["Features", "How It Works", "Pricing", "Tutors"];
+  const links = ["Home", "Features", "How It Works", "Pricing"];
 
   return (
     <nav
-      className="fixed top-0 left-0 z-999 right-0 z-50 transition-all duration-500"
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={{
         background: scrolled ? "rgba(15,23,42,0.85)" : "transparent",
         backdropFilter: scrolled ? "blur(16px)" : "none",
@@ -272,7 +272,7 @@ function Hero() {
           {/* CTAs */}
           <div className="flex flex-wrap gap-4">
             <a
-              href="#signup"
+              href="/signup"
               className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl font-semibold text-white text-base transition-all duration-300"
               style={{
                 background: "linear-gradient(135deg,#2563EB 0%,#7C3AED 100%)",
