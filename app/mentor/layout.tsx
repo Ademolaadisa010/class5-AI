@@ -3,6 +3,7 @@
 import { useState, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 function Icon({ d, size = 20 }: { d: string; size?: number }) {
   return (
@@ -55,12 +56,10 @@ function Sidebar() {
         style={{ width:248, background:"#0B1120", borderRight:"1px solid rgba(255,255,255,0.05)", transform: open ? "translateX(0)" : undefined }}>
 
         {/* logo */}
-        <div className="flex items-center justify-between px-5 py-5"
+        <div className="flex items-center justify-between px-5 py-2"
           style={{ borderBottom:"1px solid rgba(255,255,255,0.05)" }}>
           <Link href="/mentor/dashboard" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-              style={{ background:"linear-gradient(135deg,#D97706,#F59E0B)", fontFamily:"var(--font-sora)" }}>C5</div>
-            <span className="font-bold text-white text-base" style={{ fontFamily:"var(--font-sora)" }}>Class5 AI</span>
+            <Image src="/logo.png" alt="logo" width={60} height={50} />
           </Link>
           <button className="lg:hidden text-slate-500 hover:text-white" onClick={toggle}>
             <Icon d={ic.x} size={18} />
