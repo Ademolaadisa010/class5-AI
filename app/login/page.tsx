@@ -3,6 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase"; // ← adjust path if needed
 
 function Icon({ d, size = 18 }: { d: string; size?: number }) {
   return (
@@ -27,6 +35,7 @@ const ic = {
 type View = "login" | "forgot" | "sent";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [view, setView]             = useState<View>("login");
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
@@ -48,14 +57,56 @@ export default function LoginPage() {
     return !Object.keys(e).length;
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  /* ── Firebase: email/password login ── */
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateLogin()) return;
     setLoading(true);
-    setTimeout(() => { setLoading(false); setDone(true); }, 1700);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setDone(true);
+      setTimeout(() => router.push("/dashboard"), 1800);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (
+        code === "auth/user-not-found" ||
+        code === "auth/wrong-password" ||
+        code === "auth/invalid-credential"
+      ) {
+        setErrors({ password: "Incorrect email or password." });
+      } else if (code === "auth/too-many-requests") {
+        setErrors({ password: "Too many attempts. Please try again later." });
+      } else if (code === "auth/user-disabled") {
+        setErrors({ email: "This account has been disabled." });
+      } else {
+        setErrors({ password: "Something went wrong. Please try again." });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleForgot = (e: React.FormEvent) => {
+  /* ── Firebase: Google login ── */
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      setDone(true);
+      setTimeout(() => router.push("/students/dashboard"), 1800);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code !== "auth/popup-closed-by-user") {
+        setErrors({ password: "Google sign-in failed. Please try again." });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── Firebase: password reset ── */
+  const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail.trim() || !/\S+@\S+\.\S+/.test(resetEmail)) {
       setErrors({ resetEmail: "Enter a valid email address" });
@@ -63,7 +114,21 @@ export default function LoginPage() {
     }
     setErrors({});
     setLoading(true);
-    setTimeout(() => { setLoading(false); setView("sent"); }, 1400);
+
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setView("sent");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/user-not-found") {
+        // Don't reveal if email exists — still show "sent" for security
+        setView("sent");
+      } else {
+        setErrors({ resetEmail: "Failed to send reset email. Try again." });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ── shared input style ──────────────────────────────── */
@@ -89,7 +154,6 @@ export default function LoginPage() {
     e.currentTarget.style.boxShadow   = "none";
   };
 
-  /* ── left-panel feature list ─────────────────────────── */
   const features = [
     { emoji: "🧠", text: "AI summaries & instant explanations" },
     { emoji: "📝", text: "Auto-generate quizzes from your notes"  },
@@ -104,7 +168,6 @@ export default function LoginPage() {
       <div className="hidden lg:flex flex-col justify-between w-[46%] relative overflow-hidden p-12"
         style={{ background: "linear-gradient(160deg,#0F172A 0%,#1E1B4B 55%,#0F172A 100%)" }}>
 
-        {/* orbs + grid */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute rounded-full" style={{ width:500,height:500,top:"-5%",left:"-18%",background:"rgba(37,99,235,0.15)",filter:"blur(110px)",animation:"drift1 9s ease-in-out infinite" }} />
           <div className="absolute rounded-full" style={{ width:380,height:380,bottom:"0%",right:"-10%",background:"rgba(124,58,237,0.18)",filter:"blur(90px)",animation:"drift2 12s ease-in-out infinite" }} />
@@ -112,12 +175,10 @@ export default function LoginPage() {
           <div className="absolute inset-0" style={{ backgroundImage:"linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)",backgroundSize:"52px 52px" }} />
         </div>
 
-        {/* logo */}
         <div className="relative flex items-center gap-3">
           <Image src="/logo.png" alt="logo" width={60} height={50} />
         </div>
 
-        {/* centre copy */}
         <div className="relative space-y-10">
           <div>
             <h2 className="font-extrabold text-white leading-tight mb-3"
@@ -146,7 +207,6 @@ export default function LoginPage() {
           </ul>
         </div>
 
-        {/* social proof */}
         <div className="relative">
           <div className="flex -space-x-3 mb-3">
             {[["A","#3B82F6"],["S","#8B5CF6"],["K","#F59E0B"],["T","#10B981"],["R","#EC4899"]].map(([l,c],i)=>(
@@ -189,10 +249,16 @@ export default function LoginPage() {
               </div>
 
               {/* Google */}
-              <button type="button"
+              <button type="button" onClick={handleGoogleLogin} disabled={loading}
                 className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl text-sm font-semibold text-white mb-6 transition-all duration-200"
-                style={{ background:"#1E293B",border:"1px solid rgba(255,255,255,0.08)",fontFamily:"var(--font-sora)" }}
-                onMouseEnter={(e)=>{ e.currentTarget.style.background="#253347"; e.currentTarget.style.borderColor="rgba(255,255,255,0.16)"; }}
+                style={{
+                  background:"#1E293B",
+                  border:"1px solid rgba(255,255,255,0.08)",
+                  fontFamily:"var(--font-sora)",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.6 : 1,
+                }}
+                onMouseEnter={(e)=>{ if (!loading) { e.currentTarget.style.background="#253347"; e.currentTarget.style.borderColor="rgba(255,255,255,0.16)"; } }}
                 onMouseLeave={(e)=>{ e.currentTarget.style.background="#1E293B"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; }}>
                 <svg width={18} height={18} viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -203,7 +269,6 @@ export default function LoginPage() {
                 Continue with Google
               </button>
 
-              {/* divider */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="flex-1 h-px" style={{ background:"rgba(255,255,255,0.06)" }} />
                 <span className="text-xs" style={{ color:"#334155" }}>or continue with email</span>

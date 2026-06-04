@@ -564,7 +564,6 @@ export default function AdminAnalyticsPage() {
           </p>
         </div>
       </div>
-
     </div>
   );
 }
