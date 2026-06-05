@@ -66,7 +66,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setDone(true);
-      setTimeout(() => router.push("/dashboard"), 1800);
+      setTimeout(() => router.push("/student/dashboard"), 1800);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (
@@ -94,7 +94,7 @@ export default function LoginPage() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       setDone(true);
-      setTimeout(() => router.push("/students/dashboard"), 1800);
+      setTimeout(() => router.push("/student/dashboard"), 1800);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code !== "auth/popup-closed-by-user") {
