@@ -72,7 +72,6 @@ const roleCfg = {
   },
 };
 
-// Standalone Steps component — defined outside to avoid remount
 function Steps({ current, total, color }: { current: number; total: number; color: string }) {
   return (
     <div className="flex items-center gap-2">
@@ -100,12 +99,12 @@ function Steps({ current, total, color }: { current: number; total: number; colo
 export default function SignupPage() {
   const router = useRouter();
 
-  const [role, setRole]       = useState<Role>("student");
-  const [step, setStep]       = useState(0);
+  const [role, setRole]         = useState<Role>("student");
+  const [step, setStep]         = useState(0);
   const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [done, setDone]       = useState(false);
-  const [errors, setErrors]   = useState<Record<string, string>>({});
+  const [loading, setLoading]   = useState(false);
+  const [done, setDone]         = useState(false);
+  const [errors, setErrors]     = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", phone: "",
@@ -119,7 +118,6 @@ export default function SignupPage() {
   const set = (k: string, v: string | boolean) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  // ── shared styles ──
   const inputCss = (err?: string): React.CSSProperties => ({
     background: "#1E293B",
     border: `1px solid ${err ? "#EF4444" : "rgba(255,255,255,0.07)"}`,
@@ -142,7 +140,6 @@ export default function SignupPage() {
     e.currentTarget.style.boxShadow   = "none";
   };
 
-  // ── validation ──
   const validate1 = () => {
     const e: Record<string, string> = {};
     if (!form.firstName.trim()) e.firstName = "Required";
@@ -169,35 +166,73 @@ export default function SignupPage() {
   const handleNext = () => { if (validate1()) { setErrors({}); setStep(2); } };
   const handleBack = () => { setErrors({}); setStep(1); };
 
+  // ── helper: map any Firebase error code to a user-friendly message ──
+  const firebaseErrMsg = (code: string | undefined): { field: string; msg: string } => {
+    switch (code) {
+      case "auth/email-already-in-use":    return { field: "email",    msg: "This email is already registered. Try logging in." };
+      case "auth/invalid-email":           return { field: "email",    msg: "That email address is not valid." };
+      case "auth/weak-password":           return { field: "password", msg: "Password is too weak. Use at least 8 characters." };
+      case "auth/network-request-failed":  return { field: "email",    msg: "No internet connection. Check your network and try again." };
+      case "auth/too-many-requests":       return { field: "email",    msg: "Too many attempts. Please wait a moment and try again." };
+      case "auth/operation-not-allowed":   return { field: "email",    msg: "Email sign-up is not enabled. Contact support." };
+      case "permission-denied":            return { field: "email",    msg: "Account created but profile save failed (Firestore rules). Please contact support." };
+      default:                             return { field: "email",    msg: `Something went wrong (${code ?? "unknown"}). Please try again.` };
+    }
+  };
+
   // ── Firebase: email signup ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate2()) return;
     setLoading(true);
+
+    let uid: string | null = null;
+
     try {
+      // Step 1: create auth user
       const { user } = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      uid = user.uid;
+
+      // Step 2: set display name
       await updateProfile(user, { displayName: `${form.firstName} ${form.lastName}` });
+
+      // Step 3: write Firestore doc
       await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid, role,
-        firstName: form.firstName, lastName: form.lastName,
-        email: form.email, phone: form.phone || null,
+        uid: user.uid,
+        role,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone || null,
         ...(role === "student"
           ? { level: form.level }
           : { subject: form.subject, experience: form.experience, bio: form.bio || null }),
         createdAt: serverTimestamp(),
       });
+
       setDone(true);
       setTimeout(() => router.push(cfg.dashboard), 2000);
+
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
-      if (code === "auth/email-already-in-use") {
-        setErrors({ email: "This email is already registered. Try logging in." });
-        setStep(2);
-      } else if (code === "auth/weak-password") {
-        setErrors({ password: "Password is too weak." });
-      } else {
-        setErrors({ email: "Something went wrong. Please try again." });
+      // Log the real error so you can see it in the browser console
+      console.error("[Signup error]", code, err);
+
+      const { field, msg } = firebaseErrMsg(code);
+
+      // If auth succeeded but Firestore failed, still let them in
+      if (uid && code === "permission-denied") {
+        console.warn("Firestore write failed — redirecting anyway");
+        setDone(true);
+        setTimeout(() => router.push(cfg.dashboard), 2000);
+        return;
       }
+
+      setErrors({ [field]: msg });
+
+      // If email error, send user back to step 2 so they can see it
+      if (field === "email" && step !== 2) setStep(2);
+
     } finally {
       setLoading(false);
     }
@@ -209,30 +244,36 @@ export default function SignupPage() {
     try {
       const provider = new GoogleAuthProvider();
       const { user } = await signInWithPopup(auth, provider);
+
       await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid, role,
+        uid: user.uid,
+        role,
         firstName: user.displayName?.split(" ")[0] ?? "",
         lastName: user.displayName?.split(" ").slice(1).join(" ") ?? "",
-        email: user.email, phone: user.phoneNumber || null,
+        email: user.email,
+        phone: user.phoneNumber || null,
         ...(role === "student"
           ? { level: form.level || null }
           : { subject: form.subject || null, experience: form.experience || null, bio: form.bio || null }),
         createdAt: serverTimestamp(),
       }, { merge: true });
+
       setForm((f) => ({ ...f, firstName: user.displayName?.split(" ")[0] ?? f.firstName }));
       setDone(true);
       setTimeout(() => router.push(cfg.dashboard), 2000);
+
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
+      console.error("[Google signup error]", code, err);
       if (code !== "auth/popup-closed-by-user") {
-        setErrors({ email: "Google sign-in failed. Please try again." });
+        const { msg } = firebaseErrMsg(code);
+        setErrors({ email: msg });
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // ── reusable field label ──
   const FieldLabel = ({ text }: { text: string }) => (
     <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
       style={{ color: "#475569", fontFamily: "var(--font-sora)" }}>{text}</label>
@@ -246,7 +287,6 @@ export default function SignupPage() {
     pointerEvents: "none", color: "#334155",
   };
 
-  // ── password strength ──
   const strength = form.password.length < 4 ? 1 : form.password.length < 8 ? 2 : form.password.length < 12 ? 3 : 4;
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"][strength];
   const strengthColor = strength < 2 ? "#EF4444" : strength < 3 ? "#F59E0B" : "#10B981";
@@ -333,14 +373,13 @@ export default function SignupPage() {
         }} />
 
         <div className="relative w-full max-w-md">
-          {/* mobile logo */}
           <div className="flex lg:hidden items-center gap-2 mb-6">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold"
               style={{ background: cfg.grad, fontFamily: "var(--font-sora)" }}>C5</div>
             <span className="text-white font-bold" style={{ fontFamily: "var(--font-sora)" }}>Class5 AI</span>
           </div>
 
-          {/* ═══════════ DONE STATE ═══════════ */}
+          {/* ═══ DONE ═══ */}
           {done && (
             <div className="text-center py-10 space-y-5 animate-fadeUp">
               <div className="relative inline-flex">
@@ -359,8 +398,8 @@ export default function SignupPage() {
                   Your {cfg.label.toLowerCase()} account is ready. Redirecting to your dashboard…
                 </p>
               </div>
-              <div className="flex justify-center gap-3 pt-2">
-                {["Setting up workspace", "Personalising feed", "Almost ready"].map((t, i) => (
+              <div className="flex justify-center gap-3 pt-2 flex-wrap">
+                {["Setting up workspace", "Personalising feed", "Almost ready"].map((t) => (
                   <div key={t} className="flex items-center gap-1.5 text-xs"
                     style={{ color: cfg.color, fontFamily: "var(--font-dm)" }}>
                     <Icon d={ic.check} size={11} /> {t}
@@ -370,7 +409,7 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* ═══════════ STEP 0: ROLE PICKER ═══════════ */}
+          {/* ═══ STEP 0: ROLE ═══ */}
           {!done && step === 0 && (
             <div className="space-y-6 animate-fadeUp">
               <div>
@@ -443,7 +482,7 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* ═══════════ STEP 1: PERSONAL INFO ═══════════ */}
+          {/* ═══ STEP 1: PERSONAL INFO ═══ */}
           {!done && step === 1 && (
             <div className="space-y-5 animate-fadeUp">
               <div className="flex items-center justify-between">
@@ -454,48 +493,35 @@ export default function SignupPage() {
                 <Steps current={1} total={2} color={cfg.color} />
               </div>
 
-              {/* name row */}
               <div className="grid grid-cols-2 gap-3">
                 {(["firstName", "lastName"] as const).map((k) => (
                   <div key={k} className="space-y-1.5">
                     <FieldLabel text={k === "firstName" ? "First Name" : "Last Name"} />
                     <div className="relative">
                       <span style={iconWrap}><Icon d={ic.user} size={16} /></span>
-                      <input
-                        value={form[k]}
-                        onChange={(e) => set(k, e.target.value)}
+                      <input value={form[k]} onChange={(e) => set(k, e.target.value)}
                         placeholder={k === "firstName" ? "Ada" : "Obi"}
-                        style={inputCss(errors[k])}
-                        onFocus={onFocus} onBlur={onBlur}
-                      />
+                        style={inputCss(errors[k])} onFocus={onFocus} onBlur={onBlur} />
                     </div>
                     <FieldError msg={errors[k]} />
                   </div>
                 ))}
               </div>
 
-              {/* phone */}
               <div className="space-y-1.5">
                 <FieldLabel text="Phone (optional)" />
                 <div className="relative">
                   <span style={iconWrap}><Icon d={ic.phone} size={16} /></span>
-                  <input
-                    value={form.phone}
-                    onChange={(e) => set("phone", e.target.value)}
+                  <input value={form.phone} onChange={(e) => set("phone", e.target.value)}
                     placeholder="+234 800 000 0000"
-                    style={inputCss()}
-                    onFocus={onFocus} onBlur={onBlur}
-                  />
+                    style={inputCss()} onFocus={onFocus} onBlur={onBlur} />
                 </div>
               </div>
 
-              {/* student: level */}
               {role === "student" && (
                 <div className="space-y-1.5">
                   <FieldLabel text="Education Level" />
-                  <select
-                    value={form.level}
-                    onChange={(e) => set("level", e.target.value)}
+                  <select value={form.level} onChange={(e) => set("level", e.target.value)}
                     style={{
                       width: "100%", padding: "12px 16px", borderRadius: "12px",
                       background: "#1E293B",
@@ -513,14 +539,11 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* mentor: subject + experience + bio */}
               {role === "mentor" && (
                 <>
                   <div className="space-y-1.5">
                     <FieldLabel text="Primary Subject" />
-                    <select
-                      value={form.subject}
-                      onChange={(e) => set("subject", e.target.value)}
+                    <select value={form.subject} onChange={(e) => set("subject", e.target.value)}
                       style={{
                         width: "100%", padding: "12px 16px", borderRadius: "12px",
                         background: "#1E293B",
@@ -541,32 +564,24 @@ export default function SignupPage() {
                     <FieldLabel text="Years of Experience" />
                     <div className="relative">
                       <span style={iconWrap}><Icon d={ic.briefcase} size={16} /></span>
-                      <input
-                        value={form.experience}
-                        onChange={(e) => set("experience", e.target.value)}
+                      <input value={form.experience} onChange={(e) => set("experience", e.target.value)}
                         placeholder="e.g. 3 years"
-                        style={inputCss(errors.experience)}
-                        onFocus={onFocus} onBlur={onBlur}
-                      />
+                        style={inputCss(errors.experience)} onFocus={onFocus} onBlur={onBlur} />
                     </div>
                     <FieldError msg={errors.experience} />
                   </div>
 
                   <div className="space-y-1.5">
                     <FieldLabel text="Short Bio (optional)" />
-                    <textarea
-                      value={form.bio}
-                      onChange={(e) => set("bio", e.target.value)}
-                      rows={3}
-                      placeholder="Tell students about your teaching style and experience…"
+                    <textarea value={form.bio} onChange={(e) => set("bio", e.target.value)}
+                      rows={3} placeholder="Tell students about your teaching style…"
                       style={{
                         width: "100%", padding: "12px 16px", borderRadius: "12px",
                         background: "#1E293B", border: "1px solid rgba(255,255,255,0.07)",
                         color: "#CBD5E1", fontFamily: "var(--font-dm)", fontSize: "0.875rem",
                         outline: "none", resize: "none",
                       }}
-                      onFocus={onFocus} onBlur={onBlur}
-                    />
+                      onFocus={onFocus} onBlur={onBlur} />
                   </div>
                 </>
               )}
@@ -588,7 +603,7 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* ═══════════ STEP 2: ACCOUNT DETAILS ═══════════ */}
+          {/* ═══ STEP 2: ACCOUNT ═══ */}
           {!done && step === 2 && (
             <form onSubmit={handleSubmit} className="space-y-5 animate-fadeUp" noValidate>
               <div className="flex items-center justify-between">
@@ -599,7 +614,6 @@ export default function SignupPage() {
                 <Steps current={2} total={2} color={cfg.color} />
               </div>
 
-              {/* Google */}
               <button type="button" onClick={handleGoogleSignup} disabled={loading}
                 className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200"
                 style={{
@@ -625,36 +639,26 @@ export default function SignupPage() {
                 <div className="flex-1 h-px" style={{ background: "#1E293B" }} />
               </div>
 
-              {/* email */}
               <div className="space-y-1.5">
                 <FieldLabel text="Email Address" />
                 <div className="relative">
                   <span style={iconWrap}><Icon d={ic.mail} size={16} /></span>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => set("email", e.target.value)}
+                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
                     placeholder="you@example.com"
-                    style={inputCss(errors.email)}
-                    onFocus={onFocus} onBlur={onBlur}
-                  />
+                    style={inputCss(errors.email)} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <FieldError msg={errors.email} />
               </div>
 
-              {/* password */}
               <div className="space-y-1.5">
                 <FieldLabel text="Password" />
                 <div className="relative">
                   <span style={iconWrap}><Icon d={ic.lock} size={16} /></span>
-                  <input
-                    type={showPass ? "text" : "password"}
-                    value={form.password}
+                  <input type={showPass ? "text" : "password"} value={form.password}
                     onChange={(e) => set("password", e.target.value)}
                     placeholder="Min. 8 characters"
                     style={{ ...inputCss(errors.password), paddingRight: "3rem" }}
-                    onFocus={onFocus} onBlur={onBlur}
-                  />
+                    onFocus={onFocus} onBlur={onBlur} />
                   <button type="button" onClick={() => setShowPass(!showPass)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
                     style={{ color: "#475569" }}
@@ -666,7 +670,6 @@ export default function SignupPage() {
                 <FieldError msg={errors.password} />
               </div>
 
-              {/* strength bar */}
               {form.password.length > 0 && (
                 <div className="space-y-1">
                   <div className="flex gap-1">
@@ -681,28 +684,21 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* confirm */}
               <div className="space-y-1.5">
                 <FieldLabel text="Confirm Password" />
                 <div className="relative">
                   <span style={iconWrap}><Icon d={ic.lock} size={16} /></span>
-                  <input
-                    type="password"
-                    value={form.confirm}
+                  <input type="password" value={form.confirm}
                     onChange={(e) => set("confirm", e.target.value)}
                     placeholder="Repeat your password"
-                    style={inputCss(errors.confirm)}
-                    onFocus={onFocus} onBlur={onBlur}
-                  />
+                    style={inputCss(errors.confirm)} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <FieldError msg={errors.confirm} />
               </div>
 
-              {/* agree */}
               <div>
                 <label className="flex items-start gap-3 cursor-pointer">
-                  <div
-                    className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all duration-200"
+                  <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all duration-200"
                     style={{
                       background: form.agree ? cfg.color : "#1E293B",
                       border: `1.5px solid ${form.agree ? cfg.color : errors.agree ? "#EF4444" : "rgba(255,255,255,0.1)"}`,
