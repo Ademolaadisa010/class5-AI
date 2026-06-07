@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { doc, updateDoc, increment, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useAuth } from "@/app/student/layout"; // adjust to your layout path
+import { useAuth } from "@/app/student/layout";
 
 // ── Gemini API call ─────────────────────────────────────────────────
 async function callGemini(prompt: string): Promise<string> {
@@ -37,7 +37,7 @@ function buildPrompt(tab: Tab, notes: string): string {
 You are an expert study assistant. Summarize the following notes clearly and concisely for a student.
 Format your response using these exact section headers wrapped in double asterisks like **Key Concept**, **Main Points**, **Key Terms**, **Takeaway**.
 Under each header, write bullet points starting with a dash (-).
-Keep it student-friendly, accurate, and under 300 words.
+Keep it student-friendly, accurate, and under 1000 words.
 
 Notes:
 ${notes}
